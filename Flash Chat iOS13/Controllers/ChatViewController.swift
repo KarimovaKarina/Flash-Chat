@@ -11,11 +11,7 @@ import Firebase
 
 class ChatViewController: UIViewController {
 
-    var messages = [
-        Message(sender: "1@2.com", body: "hello"),
-        Message(sender: "a@b.com", body: "Hi there"),
-        Message(sender: "1@2.com", body: "What's up")
-    ]
+    var messages: [Message] = []
     let db = Firestore.firestore()
     
     @IBOutlet weak var tableView: UITableView!
@@ -27,6 +23,31 @@ class ChatViewController: UIViewController {
         title = K.appName
         navigationItem.hidesBackButton = true
         tableView.register(UINib(nibName: K.cellNibName, bundle: nil), forCellReuseIdentifier: K.cellIdentifier)
+        loadMessages()
+    }
+    
+    func loadMessages() {
+        db.collection(K.FStore.collectionName).addSnapshotListener { (querySnapshot, error) in
+            self.messages = []
+            if let e = error {
+                print(e)
+            } else {
+                if let snapshotDocuments = querySnapshot?.documents {
+                    for doc in snapshotDocuments {
+                        let data = doc.data()
+                        if let sender = data[K.FStore.senderField] as? String, let body = data[K.FStore.bodyField] as? String {
+                            let newMessage = Message(sender: sender, body: body)
+                            self.messages.append(newMessage)
+                            
+                            
+                            DispatchQueue.main.async {
+                                self.tableView.reloadData()
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     
     @IBAction func sendPressed(_ sender: UIButton) {
